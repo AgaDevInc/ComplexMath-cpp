@@ -1,7 +1,8 @@
 #include <iostream>
 #include <string>
 #include <inttypes.h>
-namespace AGA
+
+namespace AGA::ComplexMath
 {
   enum Base10
   {
