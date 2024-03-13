@@ -1,88 +1,118 @@
 #include <iostream>
-#include <vector>
 #include <string>
 #include <inttypes.h>
-#include "./biInt.hpp"
-#include "./util.hpp"
+#include "./BigUInt.hpp"
 
 namespace AGA::ComplexMath
 {
   class BigInt
   {
   private:
-    AGA::Util::List<AGA::ComplexMath::biInt> digits;
-    bool isNegative;
+    AGA::ComplexMath::BigUInt value;
+    bool isNegative = false;
 
   public:
     BigInt()
     {
-      digits.addEnd(AGA::ComplexMath::biInt());
       isNegative = false;
+      value = AGA::ComplexMath::BigUInt("0");
     }
-    BigInt(std::string s)
+    BigInt(AGA::ComplexMath::BigUInt v) : value(v) {}
+    BigInt(std::string s) : value(s)
     {
+      if(s.empty()) s = "0";
       isNegative = s[0] == '-';
-      if (isNegative)
-      {
-        s = s.substr(1);
-      }
-      int size = s.size();
-      for (int i = 1; i <= size; ++i)
-      {
-        char c = s[size - i];
-        if (i % 2)
-        {
-          AGA::ComplexMath::biInt x;
-          x.set_second_digit((AGA::ComplexMath::Base10)(c - '0'));
-          digits.addStart(x);
-        }
-        else
-        {
-          AGA::ComplexMath::biInt x = digits.get(0);
-          x.set_first_digit((AGA::ComplexMath::Base10)(c - '0'));
-          digits.set(0, x);
-        }
-      }
     };
-    std::string to_string()
+    std::string to_string() const
     {
-      int size = digits.length();
-      std::string s;
-      for (int i = 0; i < size; ++i)
-      {
-        AGA::ComplexMath::biInt x = digits.get(i);
-        s = x.to_string() + s;
-      }
-      return isNegative ? "-" + s : s;
+      return (isNegative ? "-" : "") + value.to_string();
     };
-    BigInt operator-() { return BigInt(to_string().substr(0, 1) == "-" ? to_string().substr(1) : "-" + to_string()); };
-    BigInt operator+(const BigInt &other)
+    size_t length() const { return to_string().length(); }
+    BigInt negate() const
     {
-      int size = digits.length();
-      int otherSize = other.digits.length();
-      int maxSize = size > otherSize ? size : otherSize;
-      BigInt result;
-      biInt carry;
-      for (int i = 0; i < maxSize; ++i)
+      return (isNegative ? "" : "-") + value.to_string();
+    }
+    BigInt abs() const
+    {
+      return value.to_string();
+    }
+    BigInt operator-() const { return negate(); }
+    BigInt operator+(const BigInt &other) const
+    {
+      // -x + y = y - x
+      if (isNegative && !other.isNegative)
       {
+        BigInt const negative = (*this).negate();
+        return other - negative;
       }
+      // x + (-y) = x - y
+      if (!isNegative && other.isNegative)
+      {
+        BigInt const negative = (other).negate();
+        return *this - negative;
+      }
+      BigUInt result = value + other.value;
+      return (isNegative ? "-" : "") + result.to_string();
+    };
+    BigInt operator-(const BigInt &other) const
+    {
+      // -x - y = -(x + y)
+      if (isNegative && !other.isNegative)
+      {
+        BigInt const negative = (*this).negate();
+        return -(negative + other);
+      }
+      // x - (-y) = x + y
+      if (!isNegative && other.isNegative)
+      {
+        BigInt const negative = (other).negate();
+        return *this + negative;
+      }
+      if (*this == other)
+        return BigInt("0");
+      BigUInt result = value - other.value;
+      return (*this < other ? "-" : "") + result.to_string();
+    };
+    BigInt operator*(const BigInt &other) const
+    {
+      BigUInt result = value * other.value;
+      return (isNegative != other.isNegative ? "-" : "") + result.to_string();
+    };
+    BigInt operator/(const BigInt &other) const
+    {
+      BigUInt result = value / other.value;
+      return (isNegative != other.isNegative ? "-" : "") + result.to_string();
+    }
+    BigInt operator%(const BigInt &other) const
+    {
+      std::cout << "this: " << to_string() << std::endl;
+      std::cout << "other: " << other.to_string() << std::endl;
+      BigInt aux = *this / other;
+      std::cout << "*this / other: " << aux.to_string() << std::endl;
+      BigInt aux2 = aux * other;
+      std::cout << "(*this / other) * other: " << aux2.to_string() << std::endl;
+      BigInt result = *this - aux2;
+      std::cout << "*this - ((*this / other) * other): " << result.to_string() << std::endl;
       return result;
     };
-    BigInt operator-(const BigInt &other);
-    BigInt operator*(const BigInt &other);
-    BigInt operator/(const BigInt &other);
-    BigInt operator%(const BigInt &other);
-    BigInt operator+(const int &other);
-    BigInt operator-(const int &other);
-    BigInt operator*(const int &other);
-    BigInt operator/(const int &other);
-    BigInt operator%(const int &other);
-    bool operator==(const BigInt &other);
-    bool operator!=(const BigInt &other) { return !(*this == other); }
-    bool operator<(const BigInt &other);
-    bool operator<=(const BigInt &other) { return *this < other || *this == other; }
-    bool operator>(const BigInt &other);
-    bool operator>=(const BigInt &other) { return *this > other || *this == other; }
-    bool operator!();
+    bool operator==(const BigInt &other) const
+    {
+      if (isNegative != other.isNegative)
+        return false;
+      return value == other.value;
+    };
+    bool operator!=(const BigInt &other) const { return !(*this == other); }
+    bool operator<(const BigInt &other) const
+    {
+      if (isNegative && !other.isNegative)
+        return true;
+      if (!isNegative && other.isNegative)
+        return false;
+      return value < other.value;
+    };
+    bool operator<=(const BigInt &other) const { return *this < other || *this == other; }
+    bool operator>(const BigInt &other) const { return other < *this; }
+    bool operator>=(const BigInt &other) const { return *this > other || *this == other; }
+    bool operator!() const { return *this == BigInt("0"); }
   };
 }

@@ -56,5 +56,21 @@ namespace AGA::ComplexMath
       digits = get_first_digit() << 4;
       digits += n;
     }
+    bool operator==(const biInt &rhs)
+    {
+      return digits == rhs.digits;
+    }
+    bool operator!=(const biInt &rhs)
+    {
+      return digits != rhs.digits;
+    }
+    bool operator<(const biInt &rhs)
+    {
+      return digits < rhs.digits;
+    }
+    bool operator>(const biInt &rhs)
+    {
+      return digits > rhs.digits;
+    }
   };
 }
